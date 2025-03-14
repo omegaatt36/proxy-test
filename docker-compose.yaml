@@ -1,0 +1,46 @@
+version: "3"
+services:
+  squid-noauth:
+    container_name: test-proxy-squid-noauth
+    image: ubuntu/squid
+    ports:
+      - "3128:3128"
+    volumes:
+      - ./squid-noauth/squid.conf:/etc/squid/squid.conf
+
+  dante-noauth:
+    container_name: test-proxy-dante-noauth
+    image: vimagick/dante
+    ports:
+      - "1080:1080"
+    volumes:
+      - ./dante-noauth/sockd.conf:/etc/dante/sockd.conf
+    tmpfs:
+      - /run
+    restart: unless-stopped
+
+  squid-auth:
+    container_name: test-proxy-squid-auth
+    image: ubuntu/squid
+    ports:
+      - "3127:3128"
+    volumes:
+      - ./squid-auth/squid.conf:/etc/squid/squid.conf
+      - ./squid-auth/squid-passwd:/etc/squid/passwd
+
+  dante-auth:
+    container_name: test-proxy-dante-auth
+    image: vimagick/dante
+    ports:
+      - "1079:1080"
+    volumes:
+      - ./dante-auth/sockd.conf:/etc/dante/sockd.conf
+      - ./dante-auth/dante-users:/etc/dante-users
+    tmpfs:
+      - /run
+    command: sh -c "
+      id -u proxy_user > /dev/null 2>&1 || useradd -m proxy_user &&
+      echo 'proxy_user:55688' | chpasswd &&
+      sockd -f /etc/dante/sockd.conf
+      "
+    restart: unless-stopped
