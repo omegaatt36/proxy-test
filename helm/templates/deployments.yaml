@@ -1,0 +1,154 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: squid-noauth
+  namespace: {{ .Release.Namespace }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: squid-noauth
+  template:
+    metadata:
+      labels:
+        app: squid-noauth
+    spec:
+      containers:
+        - name: squid-noauth
+          image: "{{ .Values.squidNoauth.image.repository }}:{{ .Values.squidNoauth.image.tag }}"
+          imagePullPolicy: {{ .Values.squidNoauth.image.pullPolicy }}
+          ports:
+            - containerPort: 3128
+          volumeMounts:
+            - name: config
+              mountPath: /etc/squid/squid.conf
+              subPath: squid.conf
+          resources:
+            {{- toYaml .Values.squidNoauth.resources | nindent 12 }}
+      volumes:
+        - name: config
+          configMap:
+            name: squid-noauth-config
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dante-noauth
+  namespace: {{ .Release.Namespace }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: dante-noauth
+  template:
+    metadata:
+      labels:
+        app: dante-noauth
+    spec:
+      containers:
+        - name: dante-noauth
+          image: "{{ .Values.danteNoauth.image.repository }}:{{ .Values.danteNoauth.image.tag }}"
+          imagePullPolicy: {{ .Values.danteNoauth.image.pullPolicy }}
+          ports:
+            - containerPort: 1080
+          volumeMounts:
+            - name: config
+              mountPath: /etc/dante/sockd.conf
+              subPath: sockd.conf
+            - name: run
+              mountPath: /run
+          resources:
+            {{- toYaml .Values.danteNoauth.resources | nindent 12 }}
+      volumes:
+        - name: config
+          configMap:
+            name: dante-noauth-config
+        - name: run
+          emptyDir: {}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: squid-auth
+  namespace: {{ .Release.Namespace }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: squid-auth
+  template:
+    metadata:
+      labels:
+        app: squid-auth
+    spec:
+      containers:
+        - name: squid-auth
+          image: "{{ .Values.squidAuth.image.repository }}:{{ .Values.squidAuth.image.tag }}"
+          imagePullPolicy: {{ .Values.squidAuth.image.pullPolicy }}
+          ports:
+            - containerPort: 3128
+          volumeMounts:
+            - name: config
+              mountPath: /etc/squid/squid.conf
+              subPath: squid.conf
+            - name: passwd
+              mountPath: /etc/squid/passwd
+              subPath: passwd
+          resources:
+            {{- toYaml .Values.squidAuth.resources | nindent 12 }}
+      volumes:
+        - name: config
+          configMap:
+            name: squid-auth-config
+        - name: passwd
+          secret:
+            secretName: squid-auth-secret
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dante-auth
+  namespace: {{ .Release.Namespace }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: dante-auth
+  template:
+    metadata:
+      labels:
+        app: dante-auth
+    spec:
+      containers:
+        - name: dante-auth
+          image: "{{ .Values.danteAuth.image.repository }}:{{ .Values.danteAuth.image.tag }}"
+          imagePullPolicy: {{ .Values.danteAuth.image.pullPolicy }}
+          ports:
+            - containerPort: 1080
+          command:
+            - /bin/sh
+            - -c
+            - |
+              id -u proxy_user > /dev/null 2>&1 || useradd -m proxy_user &&
+              echo 'proxy_user:55688' | chpasswd &&
+              sockd -f /etc/dante/sockd.conf
+          volumeMounts:
+            - name: config
+              mountPath: /etc/dante/sockd.conf
+              subPath: sockd.conf
+            - name: users
+              mountPath: /etc/dante-users
+              subPath: dante-users
+            - name: run
+              mountPath: /run
+          resources:
+            {{- toYaml .Values.danteAuth.resources | nindent 12 }}
+      volumes:
+        - name: config
+          configMap:
+            name: dante-auth-config
+        - name: users
+          secret:
+            secretName: dante-auth-secret
+        - name: run
+          emptyDir: {}

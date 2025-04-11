@@ -1,0 +1,76 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: squid-noauth-config
+  namespace: {{ .Release.Namespace }}
+data:
+  squid.conf: |
+    http_port 3128
+    http_access allow all
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: dante-noauth-config
+  namespace: {{ .Release.Namespace }}
+data:
+  sockd.conf: |
+    debug: 1
+    logoutput: stderr
+    internal: 0.0.0.0 port = 1080
+    external: eth0
+    socksmethod: username none
+    clientmethod: none
+    user.privileged: root
+    user.unprivileged: nobody
+
+    client pass {
+        from: 0.0.0.0/0 port 1-65535 to: 0.0.0.0/0
+        log: connect error
+    }
+
+    socks pass {
+        from: 0.0.0.0/0 to: 0.0.0.0/0
+        log: connect error
+    }
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: squid-auth-config
+  namespace: {{ .Release.Namespace }}
+data:
+  squid.conf: |
+    http_port 3128
+    auth_param basic program /usr/lib/squid/basic_ncsa_auth /etc/squid/passwd
+    auth_param basic realm proxy
+    acl authenticated proxy_auth REQUIRED
+    http_access allow authenticated
+    http_access deny all
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: dante-auth-config
+  namespace: {{ .Release.Namespace }}
+data:
+  sockd.conf: |
+    debug: 1
+    logoutput: stderr
+    internal: 0.0.0.0 port = 1080
+    external: eth0
+    socksmethod: username
+    clientmethod: none
+    user.privileged: root
+    user.unprivileged: nobody
+
+    client pass {
+        from: 0.0.0.0/0 port 1-65535 to: 0.0.0.0/0
+        log: connect disconnect error data
+    }
+
+    socks pass {
+        from: 0.0.0.0/0 to: 0.0.0.0/0
+        socksmethod: username
+        log: connect disconnect error data
+    }

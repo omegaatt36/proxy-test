@@ -1,0 +1,9 @@
+apiVersion: v2
+name: test-proxy
+description: A Helm chart for Proxy Services
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
+maintainers:
+  - name: Admin
+    email: admin@example.com
