@@ -1,154 +1,131 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: squid-noauth
+  name: http-noauth
   namespace: {{ .Release.Namespace }}
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: squid-noauth
+      app: http-noauth
   template:
     metadata:
       labels:
-        app: squid-noauth
+        app: http-noauth
     spec:
       containers:
-        - name: squid-noauth
-          image: "{{ .Values.squidNoauth.image.repository }}:{{ .Values.squidNoauth.image.tag }}"
-          imagePullPolicy: {{ .Values.squidNoauth.image.pullPolicy }}
+        - name: http-noauth
+          image: "{{ .Values.singBox.image.repository }}:{{ .Values.singBox.image.tag }}"
+          imagePullPolicy: {{ .Values.singBox.image.pullPolicy }}
           ports:
             - containerPort: 3128
+              name: http
           volumeMounts:
             - name: config
-              mountPath: /etc/squid/squid.conf
-              subPath: squid.conf
+              mountPath: /etc/sing-box/config.yaml
+              subPath: config.yaml
           resources:
-            {{- toYaml .Values.squidNoauth.resources | nindent 12 }}
+            {{- toYaml .Values.singBox.resources | nindent 12 }}
       volumes:
         - name: config
           configMap:
-            name: squid-noauth-config
+            name: sing-box-noauth-config
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: dante-noauth
+  name: socks-noauth
   namespace: {{ .Release.Namespace }}
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: dante-noauth
+      app: socks-noauth
   template:
     metadata:
       labels:
-        app: dante-noauth
+        app: socks-noauth
     spec:
       containers:
-        - name: dante-noauth
-          image: "{{ .Values.danteNoauth.image.repository }}:{{ .Values.danteNoauth.image.tag }}"
-          imagePullPolicy: {{ .Values.danteNoauth.image.pullPolicy }}
+        - name: socks-noauth
+          image: "{{ .Values.singBox.image.repository }}:{{ .Values.singBox.image.tag }}"
+          imagePullPolicy: {{ .Values.singBox.image.pullPolicy }}
           ports:
             - containerPort: 1080
+              name: socks
           volumeMounts:
             - name: config
-              mountPath: /etc/dante/sockd.conf
-              subPath: sockd.conf
-            - name: run
-              mountPath: /run
+              mountPath: /etc/sing-box/config.yaml
+              subPath: config.yaml
           resources:
-            {{- toYaml .Values.danteNoauth.resources | nindent 12 }}
+            {{- toYaml .Values.singBox.resources | nindent 12 }}
       volumes:
         - name: config
           configMap:
-            name: dante-noauth-config
-        - name: run
-          emptyDir: {}
+            name: sing-box-noauth-config
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: squid-auth
+  name: http-auth
   namespace: {{ .Release.Namespace }}
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: squid-auth
+      app: http-auth
   template:
     metadata:
       labels:
-        app: squid-auth
+        app: http-auth
     spec:
       containers:
-        - name: squid-auth
-          image: "{{ .Values.squidAuth.image.repository }}:{{ .Values.squidAuth.image.tag }}"
-          imagePullPolicy: {{ .Values.squidAuth.image.pullPolicy }}
+        - name: http-auth
+          image: "{{ .Values.singBox.image.repository }}:{{ .Values.singBox.image.tag }}"
+          imagePullPolicy: {{ .Values.singBox.image.pullPolicy }}
           ports:
             - containerPort: 3128
+              name: http
           volumeMounts:
             - name: config
-              mountPath: /etc/squid/squid.conf
-              subPath: squid.conf
-            - name: passwd
-              mountPath: /etc/squid/passwd
-              subPath: passwd
+              mountPath: /etc/sing-box/config.yaml
+              subPath: config.yaml
           resources:
-            {{- toYaml .Values.squidAuth.resources | nindent 12 }}
+            {{- toYaml .Values.singBox.resources | nindent 12 }}
       volumes:
         - name: config
           configMap:
-            name: squid-auth-config
-        - name: passwd
-          secret:
-            secretName: squid-auth-secret
+            name: sing-box-auth-config
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: dante-auth
+  name: socks-auth
   namespace: {{ .Release.Namespace }}
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: dante-auth
+      app: socks-auth
   template:
     metadata:
       labels:
-        app: dante-auth
+        app: socks-auth
     spec:
       containers:
-        - name: dante-auth
-          image: "{{ .Values.danteAuth.image.repository }}:{{ .Values.danteAuth.image.tag }}"
-          imagePullPolicy: {{ .Values.danteAuth.image.pullPolicy }}
+        - name: socks-auth
+          image: "{{ .Values.singBox.image.repository }}:{{ .Values.singBox.image.tag }}"
+          imagePullPolicy: {{ .Values.singBox.image.pullPolicy }}
           ports:
             - containerPort: 1080
-          command:
-            - /bin/sh
-            - -c
-            - |
-              id -u proxy_user > /dev/null 2>&1 || useradd -m proxy_user &&
-              echo 'proxy_user:55688' | chpasswd &&
-              sockd -f /etc/dante/sockd.conf
+              name: socks
           volumeMounts:
             - name: config
-              mountPath: /etc/dante/sockd.conf
-              subPath: sockd.conf
-            - name: users
-              mountPath: /etc/dante-users
-              subPath: dante-users
-            - name: run
-              mountPath: /run
+              mountPath: /etc/sing-box/config.yaml
+              subPath: config.yaml
           resources:
-            {{- toYaml .Values.danteAuth.resources | nindent 12 }}
+            {{- toYaml .Values.singBox.resources | nindent 12 }}
       volumes:
         - name: config
           configMap:
-            name: dante-auth-config
-        - name: users
-          secret:
-            secretName: dante-auth-secret
-        - name: run
-          emptyDir: {}
+            name: sing-box-auth-config

@@ -1,76 +1,63 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: squid-noauth-config
+  name: sing-box-noauth-config
   namespace: {{ .Release.Namespace }}
 data:
-  squid.conf: |
-    http_port 3128
-    http_access allow all
+  config.yaml: |
+    log:
+      level: {{ .Values.singBox.log.level }}
+      timestamp: {{ .Values.singBox.log.timestamp }}
+    inbounds:
+      - type: http
+        tag: http-in-noauth
+        listen: 0.0.0.0
+        listen_port: 3128
+      - type: socks
+        tag: socks-in-noauth
+        listen: 0.0.0.0
+        listen_port: 1080
+    outbounds:
+      - type: direct
+        tag: direct
+    route:
+      rules:
+        - inbound:
+            - http-in-noauth
+            - socks-in-noauth
+          outbound: direct
 ---
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: dante-noauth-config
+  name: sing-box-auth-config
   namespace: {{ .Release.Namespace }}
 data:
-  sockd.conf: |
-    debug: 1
-    logoutput: stderr
-    internal: 0.0.0.0 port = 1080
-    external: eth0
-    socksmethod: username none
-    clientmethod: none
-    user.privileged: root
-    user.unprivileged: nobody
-
-    client pass {
-        from: 0.0.0.0/0 port 1-65535 to: 0.0.0.0/0
-        log: connect error
-    }
-
-    socks pass {
-        from: 0.0.0.0/0 to: 0.0.0.0/0
-        log: connect error
-    }
----
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: squid-auth-config
-  namespace: {{ .Release.Namespace }}
-data:
-  squid.conf: |
-    http_port 3128
-    auth_param basic program /usr/lib/squid/basic_ncsa_auth /etc/squid/passwd
-    auth_param basic realm proxy
-    acl authenticated proxy_auth REQUIRED
-    http_access allow authenticated
-    http_access deny all
----
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: dante-auth-config
-  namespace: {{ .Release.Namespace }}
-data:
-  sockd.conf: |
-    debug: 1
-    logoutput: stderr
-    internal: 0.0.0.0 port = 1080
-    external: eth0
-    socksmethod: username
-    clientmethod: none
-    user.privileged: root
-    user.unprivileged: nobody
-
-    client pass {
-        from: 0.0.0.0/0 port 1-65535 to: 0.0.0.0/0
-        log: connect disconnect error data
-    }
-
-    socks pass {
-        from: 0.0.0.0/0 to: 0.0.0.0/0
-        socksmethod: username
-        log: connect disconnect error data
-    }
+  config.yaml: |
+    log:
+      level: {{ .Values.singBox.log.level }}
+      timestamp: {{ .Values.singBox.log.timestamp }}
+    inbounds:
+      - type: http
+        tag: http-in-auth
+        listen: 0.0.0.0
+        listen_port: 3128
+        users:
+          - username: {{ .Values.singBox.auth.username }}
+            password: {{ .Values.singBox.auth.password }}
+      - type: socks
+        tag: socks-in-auth
+        listen: 0.0.0.0
+        listen_port: 1080
+        users:
+          - username: {{ .Values.singBox.auth.username }}
+            password: {{ .Values.singBox.auth.password }}
+    outbounds:
+      - type: direct
+        tag: direct
+    route:
+      rules:
+        - inbound:
+            - http-in-auth
+            - socks-in-auth
+          outbound: direct
